@@ -4,10 +4,13 @@ langchain-community
 langchain-core
 langchain-nvidia-ai-endpoints
 langchain-text-splitters
-chromadb
+langchain-chroma
+chromadb==0.4.24
+protobuf==3.20.3
 pypdf
 plotly
 pandas
+openpyxl
 umap-learn
 scikit-learn
 rapidfuzz
