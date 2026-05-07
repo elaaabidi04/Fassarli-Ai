@@ -8,11 +8,12 @@ import streamlit as st
 import requests.exceptions
 from dotenv import load_dotenv
 from ingest import ingest
-from retriever import stream_answer
+from retriever import stream_answer, NvidiaConnectionError
 from utils import check_swearing, detect_lang_label, detect_intent
 from feedback import save_good_exchange, delete_exchange
 from export_to_rag import sync_darija_db
 from classify_comments import classify_new_rows
+from suggestions import save_suggestion, load_suggestions, set_suggestion_status
 
 load_dotenv()
 
@@ -861,7 +862,76 @@ if page == "Q&A":
     # ── Handle new question ────────────────────────────────────────────────────
     question = st.chat_input("Ask me a question about your documents")
 
+    # ── /improve command styling (JS watches textarea and highlights it) ───────
+    import streamlit.components.v1 as _components
+    _components.html("""
+    <script>
+    (function () {
+        var CMDS = ['/improve', '/7assin', '/7assen', '/hassin'];
+
+        function applyStyle(el, on) {
+            if (on) {
+                el.style.color          = '#a78bfa';
+                el.style.fontWeight     = '600';
+                el.style.background     = 'rgba(139,92,246,0.08)';
+                el.style.borderColor    = 'rgba(139,92,246,0.55)';
+                el.style.caretColor     = '#a78bfa';
+                el.style.letterSpacing  = '0.015em';
+                el.style.boxShadow      = '0 0 0 2px rgba(139,92,246,0.18)';
+            } else {
+                el.style.color         = '';
+                el.style.fontWeight    = '';
+                el.style.background    = '';
+                el.style.borderColor   = '';
+                el.style.caretColor    = '';
+                el.style.letterSpacing = '';
+                el.style.boxShadow     = '';
+            }
+        }
+
+        function attach() {
+            var ta = window.parent.document.querySelector('[data-testid="stChatInputTextArea"]');
+            if (!ta) return false;
+            ta.addEventListener('input', function () {
+                var v = this.value.trimStart().toLowerCase();
+                applyStyle(this, CMDS.some(function (c) { return v.startsWith(c); }));
+            });
+            return true;
+        }
+
+        if (!attach()) {
+            var obs = new MutationObserver(function () { if (attach()) obs.disconnect(); });
+            obs.observe(window.parent.document.body, { childList: true, subtree: true });
+        }
+    })();
+    </script>
+    """, height=0, scrolling=False)
+
+    _IMPROVE_PREFIXES = ("/improve", "/7assin", "/7assen", "/hassin")
+
     if question:
+        # ── /improve (and aliases) command ────────────────────────────────────
+        _q_lower = question.strip().lower()
+        _matched_prefix = next((p for p in _IMPROVE_PREFIXES if _q_lower.startswith(p)), None)
+        if _matched_prefix:
+            suggestion_text = question.strip()[len(_matched_prefix):].strip()
+            if not suggestion_text:
+                st.info(
+                    "**Usage:** type the command followed by your correction.\n\n"
+                    "Example: `/improve The definition of overfitting should mention validation loss`\n\n"
+                    "Aliases: `/improve` · `/7assin` · `/7assen` · `/hassin`"
+                )
+            else:
+                last_q = next(
+                    (m["content"] for m in reversed(st.session_state.messages) if m["role"] == "user"), ""
+                )
+                last_a = next(
+                    (m["content"] for m in reversed(st.session_state.messages) if m["role"] == "assistant"), ""
+                )
+                save_suggestion(last_q, last_a, suggestion_text)
+                st.toast("Suggestion submitted for review — shukran! 🙏", icon="✅")
+            st.stop()
+
         # 1. Swearing check
         is_swearing, cleaned_question = check_swearing(question)
         if is_swearing:
@@ -915,14 +985,21 @@ if page == "Q&A":
 
         # 7. Stream answer
         with st.chat_message("assistant"):
-            with st.spinner("Retrieving relevant chunks..."):
-                stream, sources = stream_answer(
-                    cleaned_question,
-                    chat_history=history,
-                    intent=intent,
-                    last_answer=last_answer,
-                    lang=lang,
+            try:
+                with st.spinner("Retrieving relevant chunks..."):
+                    stream, sources = stream_answer(
+                        cleaned_question,
+                        chat_history=history,
+                        intent=intent,
+                        last_answer=last_answer,
+                        lang=lang,
+                    )
+            except NvidiaConnectionError:
+                st.error(
+                    "Cannot reach the NVIDIA API — check your internet connection and try again."
                 )
+                st.session_state.messages.pop()  # remove the unanswered user message
+                st.stop()
             if lang == "darija":
                 st.markdown('<span class="darija-tag">Darija</span>', unsafe_allow_html=True)
             try:
@@ -1036,7 +1113,7 @@ elif page == "Darija Manager":
                   "english_meaning", "french_meaning", "aggression_level", "validated"]
     existing = [c for c in _edit_cols if c in df_view.columns]
 
-    tab_edit, tab_delete = st.tabs(["Edit & Validate", "Select & Delete"])
+    tab_edit, tab_delete, tab_suggest = st.tabs(["Edit & Validate", "Select & Delete", "Suggestions"])
 
     # ── Tab 1: Edit ───────────────────────────────────────────────────────────
     with tab_edit:
@@ -1112,6 +1189,67 @@ elif page == "Darija Manager":
                     wb.save(_EXCEL)
                     st.success(f"Deleted {len(excel_rows)} row(s) from {_EXCEL}.")
                     st.rerun()
+
+    # ── Tab 3: Suggestions ────────────────────────────────────────────────────
+    with tab_suggest:
+        st.markdown('<div class="section-label">Pending user suggestions</div>', unsafe_allow_html=True)
+        st.caption("These were submitted via /improve in the chat. Approve to push to ChromaDB, reject to discard.")
+
+        suggestions = load_suggestions()
+        pending   = [s for s in suggestions if s.get("status") == "pending"]
+        approved  = [s for s in suggestions if s.get("status") == "approved"]
+        rejected  = [s for s in suggestions if s.get("status") == "rejected"]
+
+        col_p, col_a, col_r = st.columns(3)
+        col_p.metric("Pending",  len(pending))
+        col_a.metric("Approved", len(approved))
+        col_r.metric("Rejected", len(rejected))
+
+        st.divider()
+
+        if not pending:
+            st.markdown('<div class="empty-state">No pending suggestions.</div>', unsafe_allow_html=True)
+        else:
+            for s in pending:
+                with st.expander(f"[{s['timestamp']}]  {str(s['suggestion'])[:80]}..."):
+                    st.markdown(f"**Context — student asked:**")
+                    st.info(s.get("context_question") or "_(no context)_")
+                    st.markdown(f"**Bot answered:**")
+                    st.info(s.get("context_answer") or "_(no context)_")
+                    st.markdown(f"**Suggested improvement:**")
+                    st.success(s.get("suggestion", ""))
+
+                    note = st.text_input(
+                        "Reviewer note (optional)",
+                        key=f"note_{s['_row']}",
+                        placeholder="Why approved/rejected...",
+                    )
+                    ca, cr, _ = st.columns([1, 1, 4])
+
+                    if ca.button("Approve", key=f"approve_{s['_row']}", type="primary"):
+                        # Push approved suggestion to ChromaDB as a validated exchange
+                        ctx_q = s.get("context_question") or "General improvement"
+                        improvement = s.get("suggestion", "")
+                        save_good_exchange(ctx_q, improvement)
+                        set_suggestion_status(s["_row"], "approved", note)
+                        st.success("Approved and added to ChromaDB.")
+                        st.rerun()
+
+                    if cr.button("Reject", key=f"reject_{s['_row']}"):
+                        set_suggestion_status(s["_row"], "rejected", note)
+                        st.warning("Suggestion rejected.")
+                        st.rerun()
+
+        if approved or rejected:
+            st.divider()
+            with st.expander(f"History ({len(approved)} approved · {len(rejected)} rejected)"):
+                for s in approved + rejected:
+                    status_color = "#22c55e" if s["status"] == "approved" else "#ef4444"
+                    st.markdown(
+                        f'<span style="color:{status_color};font-weight:600;">[{s["status"].upper()}]</span> '
+                        f'`{s["timestamp"]}` — {str(s["suggestion"])[:120]}',
+                        unsafe_allow_html=True,
+                    )
 
 # ── Vector DB Explorer page ────────────────────────────────────────────────────
 else:
