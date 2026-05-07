@@ -1,0 +1,28 @@
+# Environment — never commit real keys
+.env
+
+# Vector store — rebuilt from indexed files
+chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Generated / local state
+chat_history.json
+indexed_files.json
+darija_chunks.json
+
+# Temp files
+temp_*.pdf
+temp.pdf
+
+# Claude Code internals
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

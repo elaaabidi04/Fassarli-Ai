@@ -1,0 +1,15 @@
+streamlit>=1.35.0
+python-dotenv
+langchain-community
+langchain-core
+langchain-nvidia-ai-endpoints
+langchain-text-splitters
+chromadb
+pypdf
+plotly
+pandas
+umap-learn
+scikit-learn
+rapidfuzz
+langdetect
+rank-bm25
