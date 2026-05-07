@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import _compat  # noqa: F401 — Python 3.14 + urllib3 header encoding fix
 from dotenv import load_dotenv
-from langchain_chroma import Chroma
 from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 
 load_dotenv()
@@ -116,6 +115,8 @@ def sync_darija_db() -> dict:
     if not api_key:
         return {"raw_count": len(raw_chunks), "conv_count": len(conv_chunks),
                 "error": "NVIDIA_API_KEY not set in .env"}
+
+    from langchain_chroma import Chroma  # lazy — avoids numpy/protobuf conflict at module load
 
     embeddings = NVIDIAEmbeddings(
         model="nvidia/nv-embedqa-e5-v5",

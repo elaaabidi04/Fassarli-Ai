@@ -11,8 +11,6 @@ from ingest import ingest
 from retriever import stream_answer, NvidiaConnectionError
 from utils import check_swearing, detect_lang_label, detect_intent
 from feedback import save_good_exchange, delete_exchange
-from export_to_rag import sync_darija_db
-from classify_comments import classify_new_rows
 from suggestions import save_suggestion, load_suggestions, set_suggestion_status
 
 load_dotenv()
@@ -735,6 +733,7 @@ with st.sidebar:
             log_area.code("\n".join(log_lines[-10:]))  # show last 10 lines
         with st.spinner("Classifying unvalidated rows..."):
             try:
+                from classify_comments import classify_new_rows
                 result = classify_new_rows(progress_callback=_log)
                 if result["error"]:
                     st.error(f"Classification failed: {result['error']}")
@@ -749,6 +748,7 @@ with st.sidebar:
     if st.button("Sync to ChromaDB", use_container_width=True, help="Export validated rows from darija_nlp_database.xlsx and ingest into ChromaDB"):
         with st.spinner("Ingesting Darija database into ChromaDB..."):
             try:
+                from export_to_rag import sync_darija_db
                 result = sync_darija_db()
                 if result["error"]:
                     st.error(f"Sync failed: {result['error']}")
