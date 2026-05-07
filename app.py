@@ -158,6 +158,23 @@ pipe_bg    = DARK_SUB   if dark else "#ffffff"
 pipe_border = "rgba(255,255,255,0.07)" if dark else "#e5e7eb"
 empty_border = "rgba(255,255,255,0.09)" if dark else "#e5e7eb"
 
+# Pre-computed CSS blocks — avoids nested triple-quotes inside f-strings (Python < 3.12)
+_css_dark_catchall = (
+    '[data-testid="stVerticalBlock"],'
+    '[data-testid="stHorizontalBlock"],'
+    '[data-testid="stMetric"],'
+    '[data-testid="stForm"],'
+    '[data-testid="column"] { background: transparent !important; }'
+    if dark else ""
+)
+_css_scrollbar = (
+    "::-webkit-scrollbar { width: 6px; height: 6px; }"
+    "::-webkit-scrollbar-track { background: #0c0c1d; border-radius: 3px; }"
+    "::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.3); border-radius: 3px; }"
+    "::-webkit-scrollbar-thumb:hover { background: rgba(102,126,234,0.55); }"
+    if dark else ""
+)
+
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -186,15 +203,7 @@ html, body {{
 }}
 
 /* ── Catch-all dark: any element Streamlit renders white gets subdued ── */
-{"" if not dark else """
-[data-testid="stVerticalBlock"],
-[data-testid="stHorizontalBlock"],
-[data-testid="stMetric"],
-[data-testid="stForm"],
-[data-testid="column"] {
-    background: transparent !important;
-}
-"""}
+{_css_dark_catchall}
 
 /* ── Body text ── */
 p, li, span {{ color: {text_col} !important; }}
@@ -388,12 +397,7 @@ hr {{ border-color: {"rgba(255,255,255,0.08)" if dark else "#e5e7eb"} !important
 [data-testid="stSpinner"] > div {{ border-top-color: #667eea !important; }}
 
 /* ── Scrollbar ── */
-{"" if not dark else """
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0c0c1d; border-radius: 3px; }
-::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.3); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(102,126,234,0.55); }
-"""}
+{_css_scrollbar}
 
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] {{
