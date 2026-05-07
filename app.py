@@ -132,28 +132,30 @@ dark = st.session_state["dark"]
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
 LIGHT_MAIN = "#ffffff"
-DARK_MAIN  = "#0e1117"
+DARK_MAIN  = "#0c0c1d"
 LIGHT_SUB  = "#f8faff"
-DARK_SUB   = "#1a1a2e"
+DARK_SUB   = "#13132b"
+DARK_ELEVATED = "#1a1a38"
 LIGHT_TEXT = "#0e1117"
-DARK_TEXT  = "#f0f2f6"
+DARK_TEXT  = "#e8eaf6"
 LIGHT_MUTED = "#9ca3af"
-DARK_MUTED  = "rgba(255,255,255,0.45)"
+DARK_MUTED  = "rgba(232,234,246,0.42)"
 LIGHT_BORDER = "rgba(102,126,234,0.18)"
-DARK_BORDER  = "rgba(102,126,234,0.3)"
+DARK_BORDER  = "rgba(102,126,234,0.22)"
 
 main_bg    = DARK_MAIN  if dark else LIGHT_MAIN
 sub_bg     = DARK_SUB   if dark else LIGHT_SUB
+elevated   = DARK_ELEVATED if dark else "#eef2ff"
 text_col   = DARK_TEXT  if dark else LIGHT_TEXT
 muted_col  = DARK_MUTED if dark else LIGHT_MUTED
 border_col = DARK_BORDER if dark else LIGHT_BORDER
-card_grad  = (f"linear-gradient(135deg, {DARK_SUB}, #16213e)"
+card_grad  = (f"linear-gradient(145deg, {DARK_SUB}, #151530)"
               if dark else "linear-gradient(135deg, #f8faff, #eef2ff)")
-badge_bg   = ("linear-gradient(135deg,rgba(102,126,234,0.2),rgba(167,139,250,0.2))"
+badge_bg   = ("linear-gradient(135deg,rgba(102,126,234,0.18),rgba(167,139,250,0.18))"
               if dark else "linear-gradient(135deg,rgba(102,126,234,0.12),rgba(167,139,250,0.12))")
 pipe_bg    = DARK_SUB   if dark else "#ffffff"
-pipe_border = "rgba(255,255,255,0.08)" if dark else "#e5e7eb"
-empty_border = "rgba(255,255,255,0.1)" if dark else "#e5e7eb"
+pipe_border = "rgba(255,255,255,0.07)" if dark else "#e5e7eb"
+empty_border = "rgba(255,255,255,0.09)" if dark else "#e5e7eb"
 
 st.markdown(f"""
 <style>
@@ -164,85 +166,276 @@ footer {{ visibility: hidden; }}
 [data-testid="stHeader"] {{ background-color: transparent !important; }}
 [data-testid="stStatusWidget"] {{ visibility: hidden; }}
 
-/* ── Main background ── */
-.stApp {{ background-color: {main_bg} !important; }}
-[data-testid="stAppViewContainer"] {{ background-color: {main_bg} !important; }}
-.main .block-container {{ background-color: {main_bg} !important; }}
+/* ── Root background ── */
+html, body {{
+    background: {f"linear-gradient(160deg, #0c0c1d 0%, #0e0d20 60%, #0c0c1d 100%) !important" if dark else "#ffffff !important"};
+    color: {text_col} !important;
+}}
+.stApp {{
+    background: {f"linear-gradient(160deg, #0c0c1d 0%, #0e0d20 60%, #0c0c1d 100%)" if dark else "#ffffff"} !important;
+    color: {text_col} !important;
+}}
+[data-testid="stAppViewContainer"] {{
+    background: transparent !important;
+    color: {text_col} !important;
+}}
+.main .block-container {{
+    background: transparent !important;
+    padding-top: 2rem;
+}}
+
+/* ── Catch-all dark: any element Streamlit renders white gets subdued ── */
+{"" if not dark else """
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="stMetric"],
+[data-testid="stForm"],
+[data-testid="column"] {
+    background: transparent !important;
+}
+"""}
 
 /* ── Body text ── */
-p, li, span.stText {{ color: {text_col} !important; }}
+p, li, span {{ color: {text_col} !important; }}
 h1, h2, h3, h4, h5, h6 {{ color: {text_col} !important; }}
 label {{ color: {text_col} !important; }}
 .stMarkdown p {{ color: {text_col} !important; }}
+div[data-testid="stText"] {{ color: {text_col} !important; }}
 
 /* ── Chat messages ── */
-[data-testid="stChatMessage"] {{ background-color: {sub_bg} !important; border-radius: 12px; margin: 6px 0; }}
+[data-testid="stChatMessage"],
+div[data-testid="stChatMessage"] {{
+    background-color: {sub_bg} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 14px !important;
+    margin: 6px 0 !important;
+}}
 
-/* ── Chat input ── */
-[data-testid="stChatInputTextArea"] {{ background-color: {sub_bg} !important; color: {text_col} !important; }}
+/* ── Chat input area (bottom bar) ── */
+[data-testid="stBottom"] {{
+    background: {f"linear-gradient(0deg, #0c0c1d 70%, transparent 100%)" if dark else "linear-gradient(0deg, #ffffff 70%, transparent 100%)"} !important;
+}}
+[data-testid="stBottom"] > div,
+[data-testid="stBottom"] > div > div {{
+    background: transparent !important;
+}}
+[data-testid="stChatInput"],
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInput"] > div > div {{
+    background-color: {sub_bg} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 14px !important;
+}}
+[data-testid="stChatInputTextArea"],
+[data-baseweb="textarea"],
+[data-baseweb="base-input"] {{
+    background-color: {sub_bg} !important;
+    color: {text_col} !important;
+}}
+
+/* ── Text inputs & text areas ── */
+.stTextInput > div > div,
+.stTextInput input,
+.stTextArea > div > div,
+.stTextArea textarea {{
+    background-color: {sub_bg} !important;
+    color: {text_col} !important;
+    border-color: {border_col} !important;
+    border-radius: 10px !important;
+}}
+.stTextInput input:focus,
+.stTextArea textarea:focus {{
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 2px rgba(102,126,234,0.18) !important;
+}}
+
+/* ── Select / multiselect ── */
+.stSelectbox > div > div,
+.stMultiSelect > div > div {{
+    background-color: {sub_bg} !important;
+    border-color: {border_col} !important;
+    border-radius: 10px !important;
+    color: {text_col} !important;
+}}
+.stSelectbox [data-baseweb="select"] > div,
+.stMultiSelect [data-baseweb="select"] > div {{
+    background-color: {sub_bg} !important;
+    color: {text_col} !important;
+}}
+/* Dropdown popup */
+[data-baseweb="popover"] [data-baseweb="menu"],
+[data-baseweb="popover"] ul {{
+    background-color: {elevated} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 10px !important;
+}}
+[data-baseweb="popover"] li {{
+    background-color: transparent !important;
+    color: {text_col} !important;
+}}
+[data-baseweb="popover"] li:hover {{
+    background-color: rgba(102,126,234,0.15) !important;
+}}
+
+/* ── Number / date inputs ── */
+.stNumberInput > div,
+.stDateInput > div {{
+    background-color: {sub_bg} !important;
+    border-color: {border_col} !important;
+    border-radius: 10px !important;
+    color: {text_col} !important;
+}}
 
 /* ── Expanders ── */
-[data-testid="stExpander"] {{ background-color: {sub_bg} !important; border-color: {border_col} !important; }}
+[data-testid="stExpander"] {{
+    background-color: {sub_bg} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 12px !important;
+}}
 [data-testid="stExpander"] summary {{ color: {text_col} !important; }}
 [data-testid="stExpander"] p {{ color: {text_col} !important; }}
 
 /* ── Tabs ── */
+[data-testid="stTabs"] [role="tablist"] {{
+    background: transparent !important;
+    border-bottom: 1px solid {border_col} !important;
+}}
 [data-testid="stTabs"] button {{ color: {text_col} !important; }}
-[data-testid="stTabPanel"] {{ background-color: {main_bg} !important; }}
+[data-testid="stTabPanel"] {{
+    background-color: transparent !important;
+    padding-top: 1rem !important;
+}}
 
-/* ── Dataframe ── */
-[data-testid="stDataFrame"] thead th {{ background-color: {sub_bg} !important; color: {text_col} !important; }}
+/* ── Dataframe / data editor ── */
+[data-testid="stDataFrame"],
+[data-testid="stDataEditor"] {{
+    background-color: {sub_bg} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+}}
+[data-testid="stDataFrame"] thead th {{
+    background-color: {elevated} !important;
+    color: {text_col} !important;
+}}
 [data-testid="stDataFrame"] td {{ color: {text_col} !important; }}
+/* Inner iframe for data tables */
+[data-testid="stDataFrame"] iframe,
+[data-testid="stDataEditor"] iframe {{
+    border-radius: 10px !important;
+}}
 
-/* ── Buttons ── */
-.stButton > button {{
+/* ── Buttons (all Streamlit variants) ── */
+.stButton > button,
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-primary"] {{
+    background: {f"linear-gradient(135deg, {sub_bg}, {elevated})" if dark else sub_bg} !important;
+    color: {text_col} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 10px !important;
+    transition: all 0.18s ease !important;
+}}
+.stButton > button:hover,
+[data-testid="stBaseButton-secondary"]:hover,
+[data-testid="stBaseButton-primary"]:hover {{
+    background: {elevated} !important;
+    border-color: rgba(102,126,234,0.45) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(102,126,234,0.18) !important;
+}}
+
+/* ── HR ── */
+hr {{ border-color: {"rgba(255,255,255,0.08)" if dark else "#e5e7eb"} !important; }}
+
+/* ── Caption / small text ── */
+.stCaption, small {{ color: {muted_col} !important; }}
+
+/* ── Alerts ── */
+[data-testid="stAlert"] {{
+    background-color: {sub_bg} !important;
+    border: 1px solid {border_col} !important;
+    border-radius: 10px !important;
+}}
+
+/* ── File uploader ── */
+[data-testid="stFileUploader"] {{
+    background-color: {sub_bg} !important;
+    border-radius: 12px !important;
+}}
+[data-testid="stFileUploaderDropzone"] {{
+    background-color: {sub_bg} !important;
+    border: 1px dashed {border_col} !important;
+    border-radius: 12px !important;
+}}
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploaderDropzone"] span {{
+    color: {text_col} !important;
+}}
+[data-testid="stFileUploader"] section,
+[data-testid="stFileUploader"] > div {{
+    background-color: transparent !important;
+}}
+[data-testid="stFileUploaderDropzone"] button,
+[data-testid="stFileUploader"] button {{
     background-color: {sub_bg} !important;
     color: {text_col} !important;
     border: 1px solid {border_col} !important;
     border-radius: 8px !important;
 }}
 
-/* ── HR ── */
-hr {{ border-color: {"rgba(255,255,255,0.1)" if dark else "#e5e7eb"} !important; }}
+/* ── Progress / spinner ── */
+[data-testid="stSpinner"] > div {{ border-top-color: #667eea !important; }}
 
-/* ── Caption ── */
-.stCaption {{ color: {muted_col} !important; }}
-
-/* ── Alerts ── */
-[data-testid="stAlert"] {{ background-color: {sub_bg} !important; }}
-
-/* ── File uploader ── */
-[data-testid="stFileUploader"] {{ background-color: {sub_bg} !important; }}
-[data-testid="stFileUploader"] label {{ color: {text_col} !important; }}
+/* ── Scrollbar ── */
+{"" if not dark else """
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0c0c1d; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(102,126,234,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(102,126,234,0.55); }
+"""}
 
 /* ── Sidebar ── */
 section[data-testid="stSidebar"] {{
-    background: linear-gradient(160deg, #0f0c29, #302b63, #24243e) !important;
+    background: linear-gradient(170deg, #0d0b25 0%, #1a1545 45%, #1c1640 75%, #141230 100%) !important;
     min-width: 260px !important;
+    border-right: 1px solid rgba(102,126,234,0.12) !important;
 }}
 section[data-testid="stSidebar"] > div:first-child {{
     padding-top: 1.5rem;
 }}
 section[data-testid="stSidebar"] .stMarkdown p {{
-    color: rgba(255,255,255,0.85) !important;
+    color: rgba(255,255,255,0.82) !important;
 }}
 section[data-testid="stSidebar"] .stRadio p,
 section[data-testid="stSidebar"] .stRadio label,
 section[data-testid="stSidebar"] .stRadio span {{
-    color: rgba(255,255,255,0.9) !important;
+    color: rgba(255,255,255,0.88) !important;
 }}
-section[data-testid="stSidebar"] .stButton > button {{
-    background: rgba(255,255,255,0.08) !important;
+section[data-testid="stSidebar"] .stButton > button,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"],
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {{
+    background: rgba(255,255,255,0.06) !important;
     color: rgba(255,255,255,0.9) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
     width: 100%;
 }}
-section[data-testid="stSidebar"] .stButton > button:hover {{
-    background: rgba(255,255,255,0.14) !important;
+section[data-testid="stSidebar"] .stButton > button:hover,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover,
+section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"]:hover {{
+    background: rgba(102,126,234,0.18) !important;
+    border-color: rgba(102,126,234,0.4) !important;
+    transform: none;
+    box-shadow: none !important;
 }}
 section[data-testid="stSidebar"] .stCaption,
 section[data-testid="stSidebar"] small {{
-    color: rgba(255,255,255,0.45) !important;
+    color: rgba(255,255,255,0.38) !important;
+}}
+section[data-testid="stSidebar"] .stTextInput input,
+section[data-testid="stSidebar"] .stTextArea textarea {{
+    background: rgba(255,255,255,0.06) !important;
+    border-color: rgba(255,255,255,0.12) !important;
+    color: rgba(255,255,255,0.9) !important;
 }}
 
 /* ── Custom components ── */
@@ -301,7 +494,7 @@ section[data-testid="stSidebar"] small {{
     border-radius: 10px;
     padding: 12px 10px;
     text-align: center;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    box-shadow: {"0 2px 8px rgba(0,0,0,0.3)" if dark else "0 1px 4px rgba(0,0,0,0.06)"};
 }}
 .pipe-title {{ font-size: 0.8rem; font-weight: 600; color: #667eea; margin-bottom: 3px; }}
 .pipe-desc  {{ font-size: 0.7rem; color: {muted_col}; }}
@@ -310,11 +503,12 @@ section[data-testid="stSidebar"] small {{
     border: 1px dashed {empty_border}; border-radius: 12px; color: {muted_col};
 }}
 .sb-stat {{
-    background: rgba(255,255,255,0.07); border-radius: 9px;
+    background: rgba(255,255,255,0.05); border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.07);
     padding: 10px 14px; margin: 4px 0;
     display: flex; justify-content: space-between; align-items: center;
 }}
-.sb-label {{ font-size: 0.73rem; color: rgba(255,255,255,0.45); }}
+.sb-label {{ font-size: 0.73rem; color: rgba(255,255,255,0.42); }}
 .sb-value {{ font-size: 0.88rem; font-weight: 600; color: #a78bfa; }}
 .detect-pill {{
     display: inline-block; border-radius: 12px; padding: 2px 10px;
@@ -327,11 +521,12 @@ section[data-testid="stSidebar"] small {{
     border-left: 3px solid #667eea;
 }}
 .source-meta {{ font-size: 0.75rem; color: {muted_col}; margin-bottom: 4px; }}
+
 /* ── Delete button ── */
 button[title^="Remove"] {{
     background: rgba(239,68,68,0.08) !important;
     color: #ef4444 !important;
-    border: 1px solid rgba(239,68,68,0.25) !important;
+    border: 1px solid rgba(239,68,68,0.22) !important;
     border-radius: 6px !important;
     padding: 2px 6px !important;
     font-size: 0.85rem !important;
@@ -340,33 +535,41 @@ button[title^="Remove"] {{
 button[title^="Remove"]:hover {{
     background: rgba(239,68,68,0.18) !important;
     border-color: rgba(239,68,68,0.5) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }}
 
 /* ── Feedback buttons ── */
 button[title="Save as good example"],
 button[title="Mark as bad answer"] {{
     background: transparent !important;
-    border: 1px solid rgba(128,128,128,0.2) !important;
+    border: 1px solid {"rgba(255,255,255,0.12)" if dark else "rgba(0,0,0,0.1)"} !important;
     border-radius: 8px !important;
     padding: 2px 7px !important;
     font-size: 1rem !important;
     min-height: 0 !important;
     line-height: 1.5 !important;
+    transform: none !important;
+    box-shadow: none !important;
 }}
 button[title="Save as good example"]:hover {{
-    background: rgba(34,197,94,0.1) !important;
+    background: rgba(34,197,94,0.12) !important;
     border-color: #22c55e !important;
+    transform: none !important;
+    box-shadow: none !important;
 }}
 button[title="Mark as bad answer"]:hover {{
-    background: rgba(239,68,68,0.1) !important;
+    background: rgba(239,68,68,0.12) !important;
     border-color: #ef4444 !important;
+    transform: none !important;
+    box-shadow: none !important;
 }}
 
 /* ── Darija response bubble ── */
 .darija-tag {{
     display: inline-block;
-    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.15));
-    border: 1px solid rgba(245,158,11,0.4);
+    background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(217,119,6,0.14));
+    border: 1px solid rgba(245,158,11,0.38);
     border-radius: 6px;
     padding: 2px 10px;
     font-size: 0.68rem;
@@ -377,8 +580,8 @@ button[title="Mark as bad answer"]:hover {{
     margin-bottom: 10px;
 }}
 .darija-bubble {{
-    background: linear-gradient(135deg, rgba(254,243,199,0.35), rgba(253,230,138,0.12));
-    border: 1px solid rgba(245,158,11,0.22);
+    background: {"linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.05))" if dark else "linear-gradient(135deg, rgba(254,243,199,0.35), rgba(253,230,138,0.12))"};
+    border: 1px solid rgba(245,158,11,0.2);
     border-left: 3px solid #f59e0b;
     border-radius: 0 12px 12px 0;
     padding: 16px 20px;
@@ -388,8 +591,54 @@ button[title="Mark as bad answer"]:hover {{
     color: {text_col};
     word-break: break-word;
 }}
-/* Arabizi letter-numbers highlighted in amber */
 .ar-num {{ color: #d97706; font-weight: 700; }}
+
+/* ── Dark-mode HTML table (replaces dataframe iframe) ── */
+.dark-table-wrapper {{
+    width: 100%;
+    max-height: 400px;
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid {border_col};
+    background: {sub_bg};
+    margin-bottom: 8px;
+}}
+.dark-table-wrapper thead th {{
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}}
+.dark-table {{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    font-family: 'Inter', sans-serif;
+}}
+.dark-table th {{
+    background: {elevated};
+    color: {muted_col};
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid {border_col};
+    white-space: nowrap;
+}}
+.dark-table td {{
+    padding: 9px 14px;
+    color: {text_col};
+    border-bottom: 1px solid {"rgba(255,255,255,0.05)" if dark else border_col};
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}}
+.dark-table tr:last-child td {{ border-bottom: none; }}
+.dark-table tbody tr:hover td {{
+    background: {elevated};
+}}
 
 /* ── Sidebar + main slide animation ── */
 section[data-testid="stSidebar"] {{
@@ -931,7 +1180,13 @@ else:
             "Length (chars)": [len(d) for d in docs],
             "Text preview":   [d[:120] + "..." if len(d) > 120 else d for d in docs],
         })
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        if dark:
+            st.markdown(
+                f'<div class="dark-table-wrapper">{df.to_html(index=False, border=0, classes="dark-table")}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.dataframe(df, use_container_width=True, hide_index=True)
 
         if len(docs) < 2:
             st.info("Need at least 2 chunks to plot.")
@@ -940,7 +1195,7 @@ else:
         st.markdown('<div class="section-label" style="margin-top:24px;">Embedding space</div>', unsafe_allow_html=True)
         tab1, tab2 = st.tabs(["2D UMAP", "3D PCA"])
         COLORS = px.colors.qualitative.Vivid
-        plot_bg = "#1a1a2e" if dark else "#f8faff"
+        plot_bg = "#474780" if dark else "#f8faff"
 
         with tab1:
             st.caption("Each dot is one chunk. Hover to read it. Nearby dots have similar meaning.")

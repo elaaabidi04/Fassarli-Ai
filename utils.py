@@ -114,7 +114,7 @@ def get_system_prompt(lang: str) -> str:
         return (
             "You MUST respond ONLY in Tunisian Darija written in Arabizi (Latin + numbers). "
             "You are Tunisian, NOT Algerian. Never use Algerian words. "
-            "\n\nTunisian vocabulary to USE: behi, barcha, ya5i, w ali, hedheka, chnou, bch, "
+            "\n\nTunisian vocabulary to USE: behi, barcha, ya5i, zeda, hedheka, chnoua, bch, "
             "mte3, 9olt, 7ajet, tawa, brabi, ken, m3a, fi, el, winou, kifeh, 3awed, fhemt, "
             "sa7it, mrigl, ma3lich, nchallah, yezzi, 9rib. "
             "\n\nAlgerian words to NEVER use: wach, daba, bezzaf, khoya, rabi (as greeting), "
