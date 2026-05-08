@@ -76,9 +76,13 @@ def delete_indexed_file(name: str, indexed_files: list):
         indexed_files.remove(name)
 
 def _highlight_arabizi(text: str) -> str:
-    """Escape HTML, then wrap arabizi letter-numbers (3 5 7 9) in an amber span."""
     escaped = _html.escape(text)
     return re.sub(r'(?<=[a-zA-Z\'])([3579])(?=[a-zA-Z])', r'<span class="ar-num">\1</span>', escaped)
+
+def _md_stream(raw):
+    """Promote single newlines to double so markdown renders them as line breaks."""
+    for chunk in raw:
+        yield chunk.replace('\n', '\n\n') if '\n' in chunk else chunk
 
 def _show_feedback_buttons(msg_idx: int, question: str, answer: str):
     """
@@ -571,30 +575,95 @@ button[title="Mark as bad answer"]:hover {{
 /* ── Darija response bubble ── */
 .darija-tag {{
     display: inline-block;
-    background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(217,119,6,0.14));
-    border: 1px solid rgba(245,158,11,0.38);
+    background: linear-gradient(135deg, rgba(102,126,234,0.14), rgba(167,139,250,0.14));
+    border: 1px solid rgba(102,126,234,0.32);
     border-radius: 6px;
     padding: 2px 10px;
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: #f59e0b;
+    color: #818cf8;
     margin-bottom: 10px;
 }}
 .darija-bubble {{
-    background: {"linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.05))" if dark else "linear-gradient(135deg, rgba(254,243,199,0.35), rgba(253,230,138,0.12))"};
-    border: 1px solid rgba(245,158,11,0.2);
-    border-left: 3px solid #f59e0b;
-    border-radius: 0 12px 12px 0;
-    padding: 16px 20px;
+    background: transparent;
+    border-left: 2px solid rgba(102,126,234,0.45);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 16px;
     font-size: 1.02rem;
-    line-height: 2;
+    line-height: 1.85;
     letter-spacing: 0.015em;
     color: {text_col};
     word-break: break-word;
+    white-space: pre-wrap;
 }}
-.ar-num {{ color: #d97706; font-weight: 700; }}
+.ar-num {{ color: #818cf8; font-weight: 700; }}
+
+/* ── LLM-style bot message rendering ── */
+[data-testid="stChatMessage"] strong,
+[data-testid="stChatMessage"] b {{
+    background: linear-gradient(135deg, #667eea 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}}
+[data-testid="stChatMessage"] p {{
+    line-height: 1.78;
+    margin-bottom: 0.65rem;
+}}
+[data-testid="stChatMessage"] h1,
+[data-testid="stChatMessage"] h2,
+[data-testid="stChatMessage"] h3 {{
+    font-weight: 600;
+    margin: 0.9rem 0 0.45rem;
+    letter-spacing: -0.01em;
+    color: {text_col} !important;
+}}
+[data-testid="stChatMessage"] code {{
+    background: {"rgba(102,126,234,0.12)" if dark else "rgba(102,126,234,0.09)"};
+    color: #a78bfa;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.875em;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}}
+[data-testid="stChatMessage"] pre {{
+    background: {"rgba(15,15,35,0.7)" if dark else "rgba(238,242,255,0.6)"};
+    border: 1px solid {border_col};
+    border-radius: 10px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+}}
+[data-testid="stChatMessage"] pre code {{
+    background: transparent;
+    color: {text_col};
+    padding: 0;
+    font-size: 0.9em;
+}}
+[data-testid="stChatMessage"] ul,
+[data-testid="stChatMessage"] ol {{
+    padding-left: 1.4rem;
+    margin: 0.4rem 0 0.65rem;
+}}
+[data-testid="stChatMessage"] li {{
+    margin-bottom: 0.3rem;
+    line-height: 1.72;
+    color: {text_col} !important;
+}}
+[data-testid="stChatMessage"] blockquote {{
+    border-left: 3px solid rgba(102,126,234,0.5);
+    margin: 0.65rem 0;
+    padding: 4px 0 4px 14px;
+    color: {muted_col} !important;
+    font-style: italic;
+}}
+[data-testid="stChatMessage"] hr {{
+    margin: 1rem 0;
+    border-color: {border_col} !important;
+}}
 
 /* ── Dark-mode HTML table (replaces dataframe iframe) ── */
 .dark-table-wrapper {{
@@ -847,7 +916,8 @@ if page == "Q&A":
                     content = _highlight_arabizi(msg["content"])
                     st.markdown(f'<div class="darija-bubble">{content}</div>', unsafe_allow_html=True)
                 else:
-                    st.write(msg["content"])
+                    _body = re.sub(r'(?<!\n)\n(?!\n)', '\n\n', msg["content"])
+                    st.markdown(_body)
                 if msg.get("sources"):
                     with st.expander("Source chunks used"):
                         for i, doc in enumerate(msg["sources"], 1):
@@ -1007,7 +1077,7 @@ if page == "Q&A":
             if lang == "darija":
                 st.markdown('<span class="darija-tag">Darija</span>', unsafe_allow_html=True)
             try:
-                answer = st.write_stream(stream)
+                answer = st.write_stream(_md_stream(stream))
             except (
                 requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError,
