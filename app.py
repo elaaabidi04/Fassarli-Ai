@@ -85,39 +85,97 @@ def _md_stream(raw):
         yield chunk.replace('\n', '\n\n') if '\n' in chunk else chunk
 
 def _show_feedback_buttons(msg_idx: int, question: str, answer: str):
-    """
-    Thumbs up / thumbs down under each assistant message.
-    👍 saves the Q&A pair to ChromaDB and stores its ID.
-    👎 deletes it if it was previously saved, marks it as disliked.
-    Once rated, the active button is replaced by a static coloured emoji.
-    """
-    fb     = st.session_state["feedback"].get(msg_idx, {})
-    status = fb.get("status")
+    fb        = st.session_state["feedback"].get(msg_idx, {})
+    status    = fb.get("status")
+    form_key  = f"fb_form_{msg_idx}"
+    form_open = st.session_state.get(form_key)  # "up" | "down" | None
 
     c1, c2, _ = st.columns([1, 1, 10])
 
     with c1:
         if status == "liked":
             st.markdown('<span style="font-size:1.1rem;color:#22c55e;">👍</span>', unsafe_allow_html=True)
-        else:
-            if st.button("👍", key=f"up_{msg_idx}", help="Save as good example"):
-                doc_id = save_good_exchange(question, answer)
-                st.session_state["feedback"][msg_idx] = {"status": "liked", "doc_id": doc_id}
-                st.toast("Saved to knowledge base")
+        elif form_open != "up":
+            if st.button("👍", key=f"up_{msg_idx}", help="Good answer"):
+                st.session_state[form_key] = "up"
                 st.rerun()
 
     with c2:
         if status == "disliked":
             st.markdown('<span style="font-size:1.1rem;color:#ef4444;">👎</span>', unsafe_allow_html=True)
-        else:
-            if st.button("👎", key=f"down_{msg_idx}", help="Mark as bad answer"):
+        elif form_open != "down":
+            if st.button("👎", key=f"down_{msg_idx}", help="Bad answer"):
+                st.session_state[form_key] = "down"
+                st.rerun()
+
+    if form_open == "up":
+        st.markdown('<div class="fb-form">', unsafe_allow_html=True)
+        st.markdown("**👍 Good overall** — anything to flag? *(optional)*")
+        issues = st.multiselect(
+            "issues_up",
+            ["Wrong word", "Repetition", "Redundant phrasing", "Tone off", "Other"],
+            label_visibility="collapsed",
+            key=f"issues_up_{msg_idx}",
+        )
+        note = st.text_input(
+            "note_up",
+            placeholder="e.g. used '5ou' instead of '5ouya'",
+            label_visibility="collapsed",
+            key=f"note_up_{msg_idx}",
+        )
+        cs, cc, _ = st.columns([2, 2, 8])
+        with cs:
+            if st.button("Save ✓", key=f"save_up_{msg_idx}", type="primary"):
+                parts = list(issues)
+                if note.strip():
+                    parts.append(note.strip())
+                annotation = " · ".join(parts)
+                doc_id = save_good_exchange(question, answer, annotation=annotation)
+                st.session_state["feedback"][msg_idx] = {"status": "liked", "doc_id": doc_id}
+                st.session_state.pop(form_key, None)
+                st.toast("✅ Saved to knowledge base")
+                st.rerun()
+        with cc:
+            if st.button("Cancel", key=f"cancel_up_{msg_idx}"):
+                st.session_state.pop(form_key, None)
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    elif form_open == "down":
+        st.markdown('<div class="fb-form">', unsafe_allow_html=True)
+        st.markdown("**👎 What was wrong?** *(optional)*")
+        issues = st.multiselect(
+            "issues_down",
+            ["Wrong information", "Missed the question", "Wrong language mix",
+             "Repetition", "Redundant phrasing", "Too verbose", "Too short", "Wrong vocabulary"],
+            label_visibility="collapsed",
+            key=f"issues_down_{msg_idx}",
+        )
+        note = st.text_input(
+            "note_down",
+            placeholder="Be specific...",
+            label_visibility="collapsed",
+            key=f"note_down_{msg_idx}",
+        )
+        cs, cc, _ = st.columns([2, 2, 8])
+        with cs:
+            if st.button("Submit ✓", key=f"save_down_{msg_idx}", type="primary"):
                 if status == "liked" and fb.get("doc_id"):
                     delete_exchange(fb["doc_id"])
-                    st.toast("Removed from knowledge base")
-                else:
-                    st.toast("Noted — won't save this exchange")
+                parts = list(issues)
+                if note.strip():
+                    parts.append(note.strip())
+                annotation = " · ".join(parts) or "No details given"
+                save_suggestion(question, answer, f"[BAD ANSWER] {annotation}")
                 st.session_state["feedback"][msg_idx] = {"status": "disliked", "doc_id": None}
+                st.session_state.pop(form_key, None)
+                st.toast("📝 Feedback recorded")
                 st.rerun()
+        with cc:
+            if st.button("Cancel", key=f"cancel_down_{msg_idx}"):
+                st.session_state.pop(form_key, None)
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Ai for 8asrit lkleb", layout="wide", initial_sidebar_state="expanded")
@@ -570,6 +628,20 @@ button[title="Mark as bad answer"]:hover {{
     border-color: #ef4444 !important;
     transform: none !important;
     box-shadow: none !important;
+}}
+
+/* ── Feedback form ── */
+.fb-form {{
+    background: {elevated};
+    border: 1px solid {border_col};
+    border-radius: 10px;
+    padding: 12px 16px 10px 16px;
+    margin: 6px 0 4px 0;
+}}
+.fb-form p {{
+    font-size: 0.82rem !important;
+    color: {muted_col} !important;
+    margin-bottom: 8px !important;
 }}
 
 /* ── Darija response bubble ── */

@@ -2,10 +2,11 @@ from langchain_community.vectorstores import Chroma
 from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 from datetime import datetime
 
-def save_good_exchange(question: str, answer: str) -> str:
+def save_good_exchange(question: str, answer: str, annotation: str = "") -> str:
     """
     Persist a validated Q&A pair as a new document in ChromaDB.
     Returns the document ID so it can be deleted later if needed.
+    annotation: optional flagged issues / notes from the feedback form.
     """
     embeddings = NVIDIAEmbeddings(model="nvidia/nv-embedqa-e5-v5")
     db = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
@@ -15,6 +16,8 @@ def save_good_exchange(question: str, answer: str) -> str:
         f"User: {question}\n"
         f"Assistant: {answer}"
     )
+    if annotation:
+        doc_text += f"\nAnnotation: {annotation}"
 
     ids = db.add_texts(
         texts=[doc_text],
@@ -22,6 +25,7 @@ def save_good_exchange(question: str, answer: str) -> str:
             "source": "feedback_loop",
             "type": "validated_exchange",
             "date": str(datetime.now().date()),
+            "annotation": annotation,
         }],
     )
 
