@@ -120,7 +120,7 @@ def _show_feedback_buttons(msg_idx: int, question: str, answer: str):
                 st.rerun()
 
 # ── Page config ────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Ai fro 8asrit lkleb", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Ai for 8asrit lkleb", layout="wide", initial_sidebar_state="expanded")
 
 # ── Session state defaults ─────────────────────────────────────────────────────
 for key, default in [("last_lang", "en"), ("last_intent", "none"), ("dark", False), ("feedback", {}), ("darija_auth", False)]:
@@ -730,7 +730,7 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:4px 0 20px 0; border-bottom:1px solid rgba(255,255,255,0.09); margin-bottom:16px;">
         <div style="font-size:1.5rem;font-weight:700;color:white;letter-spacing:-0.02em;">Fassarli ai</div>
-        <div style="font-size:0.7rem;color:rgba(255,255,255,0.38);margin-top:2px;">RAG · Llama 3.3 · NVIDIA for 8asrit likleb</div>
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.38);margin-top:2px;">المساند الرسمي لغصرة الكلاب</div>
     </div>
     """, unsafe_allow_html=True)
 
